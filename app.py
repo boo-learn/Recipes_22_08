@@ -49,13 +49,17 @@ class QuoteModel(db.Model):
 # Resources: Author
 
 @app.route("/authors")
-def get_all_authors():
-    pass
+def get_authors():
+    quotes = QuoteModel.query.all()
+    return [quote.to_dict() for quote in quotes]
 
 
-@app.route("/authors/<int:id>")
-def get_author_by_id(id):
-    pass
+@app.route("/authors/<int:author_id>")
+def get_author_by_id(author_id):
+    author = AuthorModel.query.get(author_id)
+    if author is None:
+        return f"Author with id={author_id} not found", 404
+    return author.to_dict()
 
 
 @app.route("/authors", methods=["POST"])
@@ -67,14 +71,28 @@ def create_author():
     return author.to_dict(), 201
 
 
-@app.route("/authors/<int:id>", methods=["PUT"])
-def edit_author(id):
-    pass
+@app.route("/authors/<int:author_id>", methods=["PUT"])
+def edit_author(author_id):
+    author = AuthorModel.query.get(author_id)
+    if author is None:
+        return f"Author with id {author_id} not found.", 404
+
+    new_data = request.json
+    for key in new_data.keys():
+        setattr(author, key, new_data[key])
+
+    db.session.commit()
+    return author.to_dict()
 
 
-@app.route("/authors/<int:id>", methods=["DELETE"])
-def delete_author(id):
-    pass
+@app.route("/authors/<int:author_id>", methods=["DELETE"])
+def delete_author(author_id):
+    author = AuthorModel.query.get(author_id)
+    if author is None:
+        return f"Author with id {author_id} not found.", 404
+    db.session.delete(author)
+    db.session.commit()
+    return author.to_dict(), 201
 
 
 # Resources: Quote
@@ -123,7 +141,12 @@ def edit_quote(id):
 
 @app.route("/quotes/<int:id>", methods=['DELETE'])
 def delete_quote(id):
-    pass
+    quote = QuoteModel.query.get(id)
+    if quote is None:
+        return f"Quote with id {id} not found.", 404
+    db.session.delete(quote)
+    db.session.commit()
+    return quote.to_dict(), 201
 
 
 if __name__ == "__main__":
