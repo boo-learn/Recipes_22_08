@@ -1,6 +1,5 @@
 import os
-from flask import Flask
-from flask import request
+from flask import Flask, request, abort
 from pathlib import Path
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -9,8 +8,9 @@ BASE_DIR = Path(__file__).parent
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("://", "ql://", 1) if os.environ.get('DATABASE_URL') else None \
-                                        or f"sqlite:///{BASE_DIR / 'main.db'}"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("://", "ql://", 1) if os.environ.get(
+    'DATABASE_URL') else None \
+                         or f"sqlite:///{BASE_DIR / 'main.db'}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db, render_as_batch=True)
@@ -48,6 +48,23 @@ class QuoteModel(db.Model):
         }
 
 
+@app.errorhandler(404)
+def not_found(e):
+    response = {
+        "error": e.description,
+        "status-code": 404
+    }
+    return response, 404
+
+
+def get_object_or_404(model, object_id):
+    _object = model.query.get(object_id)
+    if _object is None:
+        abort(404, description=f"Author with id={object_id} not found")
+
+    return _object
+
+
 # Resources: Author
 
 @app.route("/authors")
@@ -58,9 +75,7 @@ def get_authors():
 
 @app.route("/authors/<int:author_id>")
 def get_author_by_id(author_id):
-    author = AuthorModel.query.get(author_id)
-    if author is None:
-        return f"Author with id={author_id} not found", 404
+    author = get_object_or_404(AuthorModel, author_id)
     return author.to_dict()
 
 
@@ -75,9 +90,7 @@ def create_author():
 
 @app.route("/authors/<int:author_id>", methods=["PUT"])
 def edit_author(author_id):
-    author = AuthorModel.query.get(author_id)
-    if author is None:
-        return f"Author with id {author_id} not found.", 404
+    author = get_object_or_404(AuthorModel, author_id)
 
     new_data = request.json
     for key in new_data.keys():
