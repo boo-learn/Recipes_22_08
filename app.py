@@ -3,6 +3,7 @@ from flask import Flask, request, abort
 from pathlib import Path
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from sqlalchemy.exc import IntegrityError
 
 BASE_DIR = Path(__file__).parent
 
@@ -84,7 +85,11 @@ def create_author():
     author_data = request.json
     author = AuthorModel(author_data["name"])
     db.session.add(author)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return "Author name must be unique", 400
     return author.to_dict(), 201
 
 
