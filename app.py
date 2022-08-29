@@ -124,10 +124,8 @@ def get_quotes():
 
 @app.route("/quotes/<int:id>")
 def get_quote_by_id(id):
-    quote = QuoteModel.query.get(id)
-    if quote:
-        return quote.to_dict()
-    return f"Quote with id {id} not found.", 404
+    quote = get_object_or_404(QuoteModel, id)
+    return quote.to_dict()
 
 
 @app.route("/authors/<int:author_id>/quotes", methods=["POST"])
